@@ -1,0 +1,31 @@
+# 价格智能更新系统配置
+# 自动生成于 2026-03-01
+
+database:
+  url: "sqlite:///data/standard_skus.db"
+  echo: false
+
+ocr:
+  use_gpu: false
+  lang: "ch"
+  det_model_dir: null
+  rec_model_dir: null
+  cls_model_dir: null
+
+matching:
+  auto_confirm_threshold: 60
+  suggest_threshold: 60
+  max_candidates: 5
+
+feishu:
+  app_id: "cli_a9299274ff785ceb"
+  app_secret: "o7OIObgyvGxhXbHfaiR56eC744jwoesz"
+  encrypt_key: "F3ibwwsxwiujmwkW0SXc10h0nuc"
+  verification_token: ""
+  bitable:
+    table_id: "tbl4nlhJzZdjkDBb"
+    # app_token 需要用户提供
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

@@ -1,0 +1,98 @@
+{
+  "name": "价格更新工作流",
+  "description": "接收飞书消息，解析报价并更新价格",
+  "nodes": [
+    {
+      "id": "start",
+      "type": "start",
+      "name": "开始",
+      "properties": {
+        "trigger": "feishu_message"
+      }
+    },
+    {
+      "id": "parse_message",
+      "type": "code",
+      "name": "解析消息",
+      "properties": {
+        "language": "python3",
+        "code": "import json\n\ndef main(args):\n    message = args['message']\n    msg_type = message.get('msg_type')\n    \n    if msg_type == 'text':\n        content = json.loads(message.get('content', '{}'))\n        text = content.get('text', '')\n        return {'text': text, 'type': 'text'}\n    elif msg_type == 'image':\n        return {'type': 'image', 'image_key': message.get('image_key')}\n    else:\n        return {'type': 'unknown'}"
+      }
+    },
+    {
+      "id": "check_command",
+      "type": "condition",
+      "name": "检查命令",
+      "properties": {
+        "conditions": [
+          {
+            "expression": "{{parse_message.output.type}} == 'text' and '帮助' in {{parse_message.output.text}}",
+            "target": "help_response"
+          },
+          {
+            "expression": "{{parse_message.output.type}} == 'text'",
+            "target": "process_price"
+          },
+          {
+            "expression": "true",
+            "target": "unsupported"
+          }
+        ]
+      }
+    },
+    {
+      "id": "help_response",
+      "type": "reply",
+      "name": "帮助回复",
+      "properties": {
+        "content": "🤖 价格更新助手使用指南\n\n📸 发送图片：直接上传供应商报价单截图\n📝 发送文本：直接粘贴报价文本\n\n支持的格式：\n大疆pk3标准2575\n影石acepro2单电黑2250\n\n📋 命令：\n• 帮助 - 显示使用说明\n• 导出 - 导出当前价格表\n\n⚠️ 提醒规则：\n✅ 双方有价格 → 自动更新\n⚠️ 标准表有，新信息无 → 建议保留\n💡 标准表无，新信息有 → 建议填充\n🆕 新SKU → 需要确认添加"
+      }
+    },
+    {
+      "id": "process_price",
+      "type": "code",
+      "name": "处理价格更新",
+      "properties": {
+        "language": "python3",
+        "code": "import sys\nsys.path.insert(0, '/workspace/projects/workspace/price-updater')\n\nfrom coze_bot import PriceUpdateHandler\n\ndef main(args):\n    text = args.get('text', '')\n    handler = PriceUpdateHandler()\n    result = handler.process_text(text)\n    return result"
+      }
+    },
+    {
+      "id": "format_result",
+      "type": "code",
+      "name": "格式化结果",
+      "properties": {
+        "language": "python3",
+        "code": "import sys\nsys.path.insert(0, '/workspace/projects/workspace/price-updater')\n\nfrom coze_bot import PriceUpdateHandler\n\ndef main(args):\n    result = args\n    handler = PriceUpdateHandler()\n    text = handler.format_result_card(result)\n    return {'text': text}"
+      }
+    },
+    {
+      "id": "send_result",
+      "type": "reply",
+      "name": "发送结果",
+      "properties": {
+        "content": "{{format_result.output.text}}"
+      }
+    },
+    {
+      "id": "unsupported",
+      "type": "reply",
+      "name": "不支持的消息",
+      "properties": {
+        "content": "❓ 暂不支持此消息类型，发送「帮助」查看使用说明"
+      }
+    }
+  ],
+  "connections": [
+    {"from": "start", "to": "parse_message"},
+    {"from": "parse_message", "to": "check_command"},
+    {"from": "check_command", "to": "help_response", "condition": 0},
+    {"from": "check_command", "to": "process_price", "condition": 1},
+    {"from": "check_command", "to": "unsupported", "condition": 2},
+    {"from": "help_response", "to": "end"},
+    {"from": "process_price", "to": "format_result"},
+    {"from": "format_result", "to": "send_result"},
+    {"from": "send_result", "to": "end"},
+    {"from": "unsupported", "to": "end"}
+  ]
+}
